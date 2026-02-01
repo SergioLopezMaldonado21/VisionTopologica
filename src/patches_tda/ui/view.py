@@ -36,6 +36,8 @@ class PlotView:
         self.ax_traj = self.fig.add_axes([0.08, 0.08, 0.85, 0.28])
         
         self._cbar = None
+        self._theta_o = 0.0 #-np.pi/2
+        self._theta_f = np.pi #3*np.pi/2
     
     def draw_param_space(self, state: "UIState") -> None:
         """Dibuja el espacio paramétrico."""
@@ -45,15 +47,15 @@ class PlotView:
         # Límites modificados
         ax.set_xlim(-np.pi/2, 3*np.pi/2)
         ax.set_ylim(0, 2 * np.pi)
-        ax.set_xlabel("θ [-π/2, 3π/2]")
+        ax.set_xlabel("θ [0, π]")#("θ [-π/2, 3π/2]")
         ax.set_ylabel("φ [0, 2π]")
         ax.set_title("Espacio Paramétrico")
         ax.grid(True, alpha=0.3)
         ax.set_aspect("equal")
         
         # Ticks para θ (eje x)
-        ax.set_xticks([-np.pi/2, 0, np.pi/2, np.pi, 3*np.pi/2])
-        ax.set_xticklabels(["-π/2", "0", "π/2", "π", "3π/2"])
+        ax.set_xticks([ 0, np.pi/2, np.pi])#([-np.pi/2, 0, np.pi/2, np.pi, 3*np.pi/2])
+        ax.set_xticklabels(["0", "π/2", "π"])
         
         # Ticks para φ (eje y)
         ax.set_yticks([0, np.pi/2, np.pi, 3*np.pi/2, 2*np.pi])

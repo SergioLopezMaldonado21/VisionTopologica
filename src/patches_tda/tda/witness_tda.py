@@ -364,22 +364,8 @@ class WitnessTDA:
         max_dims: tuple[int, ...] = (0, 1, 2),
         ax: "plt.Axes | None" = None
     ) -> "plt.Axes":
-        """
-        Dibuja barras (barcode) de persistencia.
-
-        Parameters
-        ----------
-        max_dims : tuple[int, ...]
-            Dimensiones a graficar (ej. (1,) para solo H1).
-        ax : plt.Axes | None
-            Axes existente. Si None, crea uno nuevo.
-
-        Returns
-        -------
-        plt.Axes
-            Axes con las barras.
-        """
         import matplotlib.pyplot as plt
+        from matplotlib.lines import Line2D
 
         if self.persistence_ is None:
             raise RuntimeError("Primero debe llamar a compute()")
@@ -409,6 +395,7 @@ class WitnessTDA:
 
         color_map = {0: "red", 1: "green", 2: "blue", 3: "purple"}
 
+        # --- dibujar barras ---
         y = 0
         for dim in sorted(by_dim.keys()):
             pairs = sorted(by_dim[dim], key=lambda t: t[0])
@@ -416,6 +403,14 @@ class WitnessTDA:
                 dplot = death if (death != float("inf") and np.isfinite(death)) else inf_cap
                 ax.plot([birth, dplot], [y, y], lw=2, c=color_map.get(dim, "gray"))
                 y += 1
+
+        # --- leyenda (la "cajita") ---
+        legend_dims = sorted(by_dim.keys())
+        handles = [
+            Line2D([0], [0], color=color_map.get(dim, "gray"), lw=3, label=f"H{dim}")
+            for dim in legend_dims
+        ]
+        ax.legend(handles=handles, title="Dimensión", loc="best", frameon=True)
 
         ax.set_title("Barras de Persistencia (Barcode)")
         ax.set_xlabel("Parámetro")

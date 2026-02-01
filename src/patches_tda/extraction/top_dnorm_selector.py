@@ -66,48 +66,46 @@ class TopDNormSelector:
     def last_dnorms(self) -> np.ndarray | None:
         """D-norms de la última selección (para diagnóstico)."""
         return self._last_dnorms
-    
+        
     def select(self, patches: np.ndarray) -> np.ndarray:
         """
         Selecciona el top q% de parches con mayor D-norm
         y los normaliza dividiendo por su D-norm.
 
-        Esto implementa los pasos (3c)–(4)–(5) del paper.
+        Implementa (3c)–(4)–(5) del paper.
         """
         n_patches = patches.shape[0]
         k = max(1, int(np.ceil(n_patches * self._top_fraction)))
 
-        # 1) Calcular D-norm para todos los parches
+        # 1) Calcular D-norm
         dnorms = self._dnorm_calculator.compute(patches)
         self._last_dnorms = dnorms.copy()
 
-        # 2) Índices del top-k por D-norm
-        partition_idx = np.argpartition(dnorms, -k)[-k:]
+        # 2) Índices del top-k
+        idx = np.argpartition(dnorms, -k)[-k:]
 
-        # 3) Ordenar por D-norm descendente (opcional)
-        top_k_dnorms = dnorms[partition_idx]
-        sorted_order = np.argsort(top_k_dnorms)[::-1]
-        selected_indices = partition_idx[sorted_order]
+        # 3) Ordenar descendente (opcional)
+        idx = idx[np.argsort(dnorms[idx])[::-1]]
 
-        selected_patches = patches[selected_indices]
-        selected_dnorms = dnorms[selected_indices]
+        selected_patches = patches[idx]
+        selected_dnorms = dnorms[idx]
 
-        # 4) NORMALIZACIÓN (paso clave del paper)
-        #    x <- x / ||x||_D
+        # 4) Normalizar por D-norma (paso del paper)
         selected_dnorms = np.maximum(selected_dnorms, 1e-12)
         selected_patches = selected_patches / selected_dnorms[:, None]
-        #if self._dnorm_calculator.patch_size() == 3:
-        selected_patches = self.dct_change_of_basis(selected_patches)
+
+        # 5) Cambio de base a R^8 SOLO si patch_size=3
+        if self._dnorm_calculator.patch_size == 3:
+            selected_patches = self.dct_change_of_basis(selected_patches)
+
         logger.debug(
             "Seleccionados %d/%d parches (top %.1f%%), "
             "D-norm antes de normalizar: min=%.4f, max=%.4f",
             k, n_patches, self._top_fraction * 100,
             selected_dnorms.min(), selected_dnorms.max()
         )
-        if self._dnorm_calculator.patch_size == 3:
-            return selected_patches 
-        return selected_patches[:-1]
-        
+
+        return selected_patches
 
     def dct_change_of_basis(self,selected_patches):
         """

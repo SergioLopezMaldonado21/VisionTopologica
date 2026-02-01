@@ -52,8 +52,12 @@ def build_ui(generator: "PatchGenerator") -> widgets.VBox:
     
     # Sliders en unidades de π (0 a 2 significa 0 a 2π)
     # θ va de -0.5 a 1.5 (×π) = -π/2 a 3π/2
+    #theta_slider = widgets.FloatSlider(
+    #    value=0.5, min=-0.5, max=1.5, step=0.05,
+    #    description="θ (×π)", continuous_update=True, readout_format=".2f"
+    #)
     theta_slider = widgets.FloatSlider(
-        value=0.5, min=-0.5, max=1.5, step=0.05,
+        value=0.5, min=0.0, max=1.0, step=0.05,
         description="θ (×π)", continuous_update=True, readout_format=".2f"
     )
     

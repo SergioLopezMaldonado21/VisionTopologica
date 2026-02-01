@@ -31,12 +31,37 @@ class UIController:
         self.view = view
         self.state = UIState()
         self._traj_patches_cache: List[np.ndarray] = []
-    
+        self._theta_o = 0.0 #-np.pi/2
+        self._theta_f = np.pi #3*np.pi/2
     def _recompute_trajectory(self) -> None:
         """Recalcula los puntos de la trayectoria y genera parches."""
+      
         if self.state.has_complete_trajectory():
-            traj = LineSegmentTrajectory(self.state.traj_p1, self.state.traj_p2)
-            self.state.traj_points = traj.points(self.state.traj_n)
+            traj = None
+            if self.state.traj_p1[0] == 0.0 or self.state.traj_p1[0]  == np.pi and self.state.traj_p2 is None:
+                traj_p2 = None
+                traj_p1_prime = None
+                traj_p2_prime = None
+                _2pi_minus_phi =  2*np.pi- self.state.traj_p1[1]
+
+                if self.state.traj_p1[0] == 0.0:
+                    traj_p2 = (np.pi, self.state.traj_p1[1])
+                    traj_p1_prime = (0.0, _2pi_minus_phi)
+                    traj_p2_prime = (np.pi, _2pi_minus_phi)
+                else:
+                    traj_p2 = (0.0, self.state.traj_p1[1])
+                    traj_p1_prime = (np.pi, _2pi_minus_phi)
+                    traj_p2_prime = (0.0, _2pi_minus_phi)
+
+                traj_1 = LineSegmentTrajectory(self.state.traj_p1, traj_p2)
+                traj_2 = LineSegmentTrajectory(traj_p1_prime, traj_p2_prime)
+                traj_1_points = traj_1.points(self.state.traj_n // 2)
+                traj_2_points = traj_2.points(self.state.traj_n // 2)
+                self.state.traj_points = traj_1_points + traj_2_points
+
+            else:
+                traj = LineSegmentTrajectory(self.state.traj_p1, self.state.traj_p2)
+                self.state.traj_points = traj.points(self.state.traj_n)
             self.state.traj_index = min(
                 self.state.traj_index, 
                 len(self.state.traj_points) - 1
@@ -64,14 +89,14 @@ class UIController:
     def set_theta_phi(self, theta: float, phi: float) -> None:
         """Establece los ángulos actuales."""
         # θ: -π/2 a 3π/2, φ: 0 a 2π
-        self.state.theta = float(np.clip(theta, -np.pi/2, 3*np.pi/2))
+        self.state.theta = float(np.clip(theta, self._theta_o, self._theta_f))
         self.state.phi = float(np.clip(phi, 0, 2 * np.pi))
         self.update()
     
     def set_p1(self, theta: float, phi: float) -> None:
         """Establece P1 de la trayectoria."""
         self.state.traj_p1 = (
-            float(np.clip(theta, -np.pi/2, 3*np.pi/2)),
+            float(np.clip(theta, self._theta_o, self._theta_f)),
             float(np.clip(phi, 0, 2 * np.pi))
         )
         self._recompute_trajectory()
@@ -80,7 +105,7 @@ class UIController:
     def set_p2(self, theta: float, phi: float) -> None:
         """Establece P2 de la trayectoria."""
         self.state.traj_p2 = (
-            float(np.clip(theta, -np.pi/2, 3*np.pi/2)),
+            float(np.clip(theta, self._theta_o, self._theta_f)),
             float(np.clip(phi, 0, 2 * np.pi))
         )
         self._recompute_trajectory()
@@ -88,7 +113,7 @@ class UIController:
     
     def on_click(self, theta: float, phi: float) -> None:
         """Maneja un click en el espacio paramétrico."""
-        theta = float(np.clip(theta, -np.pi/2, 3*np.pi/2))
+        theta = float(np.clip(theta, self._theta_o, self._theta_f))
         phi = float(np.clip(phi, 0, 2 * np.pi))
         
         if self.state.mode == "point":

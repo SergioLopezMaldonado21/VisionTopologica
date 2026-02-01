@@ -53,6 +53,9 @@ class UIState:
     
     def has_complete_trajectory(self) -> bool:
         """Retorna True si P1 y P2 están definidos."""
+        if self.traj_p1[0] == 0.0 or self.traj_p1[0]  == np.pi and self.traj_p2 is None:
+            return True
+        
         return self.traj_p1 is not None and self.traj_p2 is not None
     
     def clear_trajectory(self) -> None:

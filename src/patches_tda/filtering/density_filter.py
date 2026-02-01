@@ -133,18 +133,6 @@ class DensityFilter:
     ) -> np.ndarray:
         """
         Conserva el top p% de puntos más densos.
-        
-        Parameters
-        ----------
-        X : np.ndarray
-            Datos de shape (N, D).
-        densities : np.ndarray | None, optional
-            Densidades precalculadas. Si None, se calculan.
-        
-        Returns
-        -------
-        np.ndarray
-            Datos filtrados de shape (k, D) donde k = ceil(N * p).
         """
         if densities is None:
             densities = self.estimate_density(X)
@@ -152,10 +140,13 @@ class DensityFilter:
         n_points = X.shape[0]
         k = max(1, int(np.ceil(n_points * self._top_density_fraction)))
         
-        # Obtener índices del top-k usando argpartition
-        partition_idx = np.argpartition(densities, -k)[-k:]
+        # Top-k por densidad
+        idx = np.argpartition(densities, -k)[-k:]
         
-        X_filtered = X[partition_idx]
+        # Ordenar descendente (mejor para reproducibilidad / diagnóstico)
+        idx = idx[np.argsort(densities[idx])[::-1]]
+        
+        X_filtered = X[idx]
         
         logger.debug(
             "Filtrados %d/%d puntos (top %.1f%% por densidad)",
@@ -163,40 +154,38 @@ class DensityFilter:
         )
         
         return X_filtered
-    
+
     def denoise(self, X: np.ndarray) -> np.ndarray:
         """
-        Aplica denoising: reemplaza cada punto por el promedio de sus k vecinos.
-        
-        Parameters
-        ----------
-        X : np.ndarray
-            Datos de shape (N, D).
-        
-        Returns
-        -------
-        np.ndarray
-            Datos denoised de shape (N, D).
+        Aplica denoising: reemplaza cada punto por el promedio
+        de sus k vecinos (excluyendo el punto mismo).
         """
         if self._denoise_iterations == 0:
             return X.copy()
         
         n_points = X.shape[0]
-        k = min(self._k_neighbors, n_points)
+        if n_points <= 1:
+            return X.copy()
         
+        k = min(self._k_neighbors, n_points - 1)
         X_denoised = X.copy()
         
         for iteration in range(self._denoise_iterations):
             tree = KDTree(X_denoised)
-            _, indices = tree.query(X_denoised, k=k)
             
-            # Promedio de los k vecinos
+            # Pedimos k+1 vecinos y quitamos el primero (el punto mismo)
+            _, indices = tree.query(X_denoised, k=k + 1)
+            indices = indices[:, 1:]
+            
             X_denoised = np.mean(X_denoised[indices], axis=1)
             
-            logger.debug("Denoising iteración %d/%d", iteration + 1, self._denoise_iterations)
+            logger.debug(
+                "Denoising iteración %d/%d",
+                iteration + 1, self._denoise_iterations
+            )
         
         return X_denoised
-    
+
     def transform(self, X: np.ndarray) -> np.ndarray:
         """
         Ejecuta filtrado por densidad + denoising completo → X(p,k).
